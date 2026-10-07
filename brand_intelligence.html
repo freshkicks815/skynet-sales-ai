@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Brand Intelligence | {{ lead.business_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">AI BRAND INTELLIGENCE</p>
+    <h1>{{ lead.business_name }}</h1>
+    <p>Website-linked profiles are marked confirmed. Public-search matches remain possible until you verify them.</p>
+  </div>
+  <div class="score-orb"><strong>{{ report.score }}</strong><span>/100</span></div>
+</section>
+
+<div class="two-column brand-summary-grid">
+  <section class="panel">
+    <p class="eyebrow">DIGITAL PRESENCE</p>
+    <h2>{{ report.maturity }}</h2>
+    <dl class="details">
+      <div><dt>Confirmed Profiles</dt><dd>{{ report.confirmed_count }}</dd></div>
+      <div><dt>Possible Matches</dt><dd>{{ report.possible_count }}</dd></div>
+      <div><dt>TikTok</dt><dd>{% set tt = report.profiles|selectattr('platform','equalto','TikTok')|first %}{{ tt.status }}</dd></div>
+    </dl>
+  </section>
+  <section class="panel">
+    <p class="eyebrow">WEBSITE USED FOR DISCOVERY</p>
+    <form method="post" class="compact-form">
+      <input type="hidden" name="action" value="scan">
+      <label>Official website URL<input name="website_url" value="{{ website_url }}" placeholder="https://example.com"></label>
+      <button class="button">Run Fresh Scan</button>
+    </form>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="section-heading"><div><p class="eyebrow">SOCIAL CHANNELS</p><h2>Presence and Verification</h2></div></div>
+  <div class="social-audit-grid">
+  {% for item in report.profiles %}
+    <article class="social-audit-card status-{{ item.status|lower|replace(' ','-') }}">
+      <div class="social-card-head"><strong>{{ item.platform }}</strong><span class="presence-status">{{ item.status }}</span></div>
+      {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener">Open profile candidate</a>{% endif %}
+      <p>{{ item.source or 'No public profile found during this scan.' }}</p>
+      {% if item.candidates %}
+      <details><summary>Show all possible matches</summary>
+        {% for candidate in item.candidates %}<a class="candidate-link" href="{{ candidate.url }}" target="_blank" rel="noopener">{{ candidate.title or candidate.url }}</a>{% endfor %}
+      </details>
+      {% endif %}
+    </article>
+  {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <p class="eyebrow">CONFIRM PROFILES</p>
+  <h2>Save the Business's Official Social URLs</h2>
+  <p class="muted">Only save a profile after confirming it belongs to this business. Saved profiles will be included in future website concepts.</p>
+  <form method="post" class="social-confirm-form">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="website_url" value="{{ website_url }}">
+    {% for platform in platforms %}
+      {% set item = report.profiles|selectattr('platform','equalto',platform)|first %}
+      <label>{{ platform }} URL<input name="social_{{ platform|lower|replace(' ','_') }}" value="{{ item.url if item.status == 'Confirmed' else '' }}" placeholder="Paste confirmed {{ platform }} profile URL"></label>
+    {% endfor %}
+    <button class="button">Save Confirmed Profiles</button>
+  </form>
+</section>
+
+<section class="panel">
+  <p class="eyebrow">CREATIVE DIRECTOR RECOMMENDATIONS</p>
+  <h2>How to Use This Presence</h2>
+  <div class="recommendation-list">
+  {% for recommendation in report.recommendations %}<article>{{ recommendation }}</article>{% endfor %}
+  </div>
+  <div class="actions"><a class="button" href="{{ url_for('new_website_concept', lead_id=lead.id) }}">Generate Brand-Aware Concept</a></div>
+</section>
+{% endblock %}

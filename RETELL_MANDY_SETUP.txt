@@ -1,0 +1,24 @@
+SKYNET SALES AI -> RETELL MANDY SETUP
+
+1. Copy .env.example to .env if .env does not already exist.
+2. In .env, set RETELL_API_KEY to your Retell Secret Key. Do not share this key.
+3. These values are already prepared in .env.example:
+   RETELL_AGENT_ID=agent_e6e00ea88874995675d572d023
+   RETELL_FROM_NUMBER=+18159446975
+4. Start Skynet Sales AI with start_windows.bat.
+5. Open one lead that has a valid phone number.
+6. Review the lead and applicable calling rules.
+7. Click Call With Mandy and confirm.
+
+Safety / behavior:
+- One lead is called at a time; no bulk auto-dialing was added.
+- Leads marked Do Not Call are blocked from Call With Mandy.
+- Retell's honor_internal_dnc option is enabled on the API request.
+- A successful Retell request is logged in Activity Notes with the Retell call ID.
+- A failed request is logged as Mandy AI Call Error.
+
+IMPORTANT RETELL AGENT PROMPT STEP
+The app sends these dynamic variables to the Retell outbound agent:
+{{business_name}}, {{contact_name}}, {{industry}}, {{city}}, {{website_status}}, {{recommended_plan}}, {{notes}}, {{lead_id}}
+
+The Retell outbound agent must be instructed to use these as background context and never invent missing values. This package does not remotely edit your Retell agent prompt.

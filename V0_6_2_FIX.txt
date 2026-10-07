@@ -1,0 +1,11 @@
+SKYNET SALES AI v0.6.2 — FIRST-CLICK LEAD SEARCH FIX
+
+Fixed:
+- The Find Leads page now executes the current city/state and business category on the first button press.
+- Previous search results are cleared before every new search.
+- The page now uses POST/Redirect/GET so old form variables cannot be rendered after a new search.
+- Browser and proxy caching is disabled on the Lead Finder page.
+- The Find Leads button locks while searching to prevent duplicate or overlapping submissions.
+- A CURRENT SEARCH panel clearly displays the city and category used for the visible results.
+
+Existing settings.json and skynet_sales.db can be copied into this version.

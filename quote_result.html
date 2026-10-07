@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Quote | Skynet Sales AI{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">CUSTOM QUOTE</p>
+    <h1>{{ lead.business_name }}</h1>
+    <p>{{ quote.reason }}</p>
+</section>
+
+<section class="panel quote">
+    <div class="quote-top">
+        <div>
+            <span>Recommended Solution</span>
+            <h2>{{ quote.plan }}</h2>
+        </div>
+        <strong>{{ quote.total|money }}</strong>
+    </div>
+
+    <table>
+        <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+        <tbody>
+            {% for line in quote.breakdown %}
+            <tr><td>{{ line.item }}</td><td>{{ line.amount|money }}</td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot><tr><th>Estimated Total</th><th>{{ quote.total|money }}</th></tr></tfoot>
+    </table>
+
+    <p class="muted">This is an estimate. Final scope, payment terms, and delivery schedule should be confirmed before work begins.</p>
+
+    <div class="actions">
+        <a class="button" href="{{ url_for('lead_detail', lead_id=lead.id) }}">Return to Lead</a>
+        <a class="button secondary" href="{{ url_for('proposal', lead_id=lead.id) }}">Open Proposal</a>
+    </div>
+</section>
+{% endblock %}

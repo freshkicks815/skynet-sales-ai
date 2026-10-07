@@ -1,0 +1,9 @@
+Skynet Sales AI v0.6.1 classification fix
+
+- Fixed barber and barbershop leads being incorrectly classified as restaurants.
+- Added support for the common search misspelling "barbour shop".
+- Replaced unsafe substring matching with whole-word and phrase matching.
+- Specific business categories are now checked before broad restaurant terms.
+- Barber concepts now use salon/barber audiences, booking calls-to-action, and service sections.
+
+Existing concepts retain their saved text. Regenerate the website concept after installing this update.

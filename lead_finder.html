@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Lead Finder | Skynet Sales AI<script>
+(() => {
+    const form = document.getElementById('lead-search-form');
+    const button = document.getElementById('find-leads-button');
+    if (!form || !button) return;
+
+    form.addEventListener('submit', () => {
+        // Lock this exact submission so a second click cannot send an older
+        // browser-restored form state while the Google request is running.
+        button.disabled = true;
+        button.textContent = 'Searching…';
+        button.setAttribute('aria-busy', 'true');
+    });
+})();
+</script>
+{% endblock %}
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">LEAD DISCOVERY</p>
+        <h1>Find Business Prospects</h1>
+        <p>Search by city and category, prioritize businesses with weak or missing web presence, and import selected prospects into your CRM.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <form method="post" class="finder-form" id="lead-search-form" autocomplete="off">
+        <label>
+            City and State
+            <input name="city" value="{{ search_meta.city or 'Rockford, Illinois' }}" placeholder="Rockford, Illinois" autocomplete="off" required>
+        </label>
+        <label>
+            Business Category
+            <input name="category" value="{{ search_meta.category or '' }}" placeholder="Restaurants, plumbers, salons..." autocomplete="off" required>
+        </label>
+        <label class="checkbox-row">
+            <input type="checkbox" name="use_demo" value="yes">
+            Use fictional demo results
+        </label>
+        <button class="button" type="submit" id="find-leads-button">Find Leads</button>
+    </form>
+    <p class="muted">
+        Live search uses the Google Places API when <code>GOOGLE_PLACES_API_KEY</code> is configured.
+        Without a key, the application automatically loads fictional demo results so you can test the workflow.
+    </p>
+</section>
+
+{% if search_meta.city and search_meta.category %}
+<section class="panel search-status-panel">
+    <p class="eyebrow">CURRENT SEARCH</p>
+    <h3>{{ search_meta.category }} in {{ search_meta.city }}</h3>
+</section>
+{% endif %}
+
+{% if results %}
+<section class="section-heading finder-heading">
+    <div>
+        <p class="eyebrow">{{ search_meta.source|upper }} RESULTS</p>
+        <h2>{{ results|length }} Prospects</h2>
+    </div>
+</section>
+
+<div class="lead-results">
+    {% for item in results %}
+    <article class="lead-card">
+        <div class="score-ring">
+            <strong>{{ item.opportunity_score }}</strong>
+            <span>/100</span>
+        </div>
+
+        <div class="lead-card-main">
+            <div class="lead-title-row">
+                <div>
+                    <p class="eyebrow">{{ item.category }}</p>
+                    <h2>{{ item.business_name }}</h2>
+                </div>
+                <span class="badge">{{ item.website_status }}</span>
+            </div>
+
+            <div class="lead-facts">
+                <span><strong>Rating:</strong> {{ item.rating or "—" }} ({{ item.review_count }} reviews)</span>
+                <span><strong>Phone:</strong> {{ item.phone or "Not listed" }}</span>
+                <span><strong>Google photos:</strong> {{ item.photo_count or 0 }} available</span>
+                <span><strong>Address:</strong> {{ item.address or "Not listed" }}</span>
+                <span>
+                    <strong>Website:</strong>
+                    {% if item.website %}
+                        <a href="{{ item.website }}" target="_blank" rel="noopener">Open website</a>
+                    {% else %}
+                        None listed
+                    {% endif %}
+                </span>
+            </div>
+
+            <p>{{ item.reason }}</p>
+
+            <form method="post" action="{{ url_for('import_discovered_lead', result_index=loop.index0) }}">
+                <button class="button" type="submit">Add to CRM</button>
+            </form>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% endif %}
+<script>
+(() => {
+    const form = document.getElementById('lead-search-form');
+    const button = document.getElementById('find-leads-button');
+    if (!form || !button) return;
+
+    form.addEventListener('submit', () => {
+        // Lock this exact submission so a second click cannot send an older
+        // browser-restored form state while the Google request is running.
+        button.disabled = true;
+        button.textContent = 'Searching…';
+        button.setAttribute('aria-busy', 'true');
+    });
+})();
+</script>
+{% endblock %}

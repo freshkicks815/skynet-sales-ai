@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Add Lead | Skynet Sales AI{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">LEAD FINDER</p>
+    <h1>Add a Business Prospect</h1>
+    <p>Enter publicly available business information you have reviewed.</p>
+</section>
+
+<form class="panel form-grid" method="post">
+    <label>
+        Business Name *
+        <input name="business_name" required>
+    </label>
+
+    <label>
+        Contact Name
+        <input name="contact_name">
+    </label>
+
+    <label>
+        Phone
+        <input name="phone" type="tel">
+    </label>
+
+    <label>
+        Email
+        <input name="email" type="email">
+    </label>
+
+    <label>
+        Industry
+        <input name="industry" placeholder="Auto repair, restaurant, salon...">
+    </label>
+
+    <label>
+        City
+        <input name="city" placeholder="Rockford, IL">
+    </label>
+
+    <label>
+        Website Status
+        <select name="website_status">
+            <option>No website found</option>
+            <option>Website appears outdated</option>
+            <option>Social media only</option>
+            <option>Website needs improvement</option>
+        </select>
+    </label>
+
+    <label>
+        Needs E-Commerce?
+        <select name="needs_ecommerce">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+        </select>
+    </label>
+
+    <label>
+        Number of Products
+        <input name="products" type="number" min="0" value="0">
+    </label>
+
+    <label class="full">
+        Notes
+        <textarea name="notes" rows="5" placeholder="Why this business may be a good prospect..."></textarea>
+    </label>
+
+    <div class="full actions">
+        <button class="button" type="submit">Save Lead & Create Quote</button>
+    </div>
+</form>
+{% endblock %}
