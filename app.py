@@ -1026,7 +1026,7 @@ def retell_webhook():
         return {"ok": True, "ignored": "Invalid lead_id"}, 200
 
     # For now, record only the events we need.
-    if event not in ("call_ended", "call_analyzed"):
+    if event != "call_ended":
         return {"ok": True, "ignored": event}, 200
 
     # Translate Retell's final call result into something useful
