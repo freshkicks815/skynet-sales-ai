@@ -1000,6 +1000,7 @@ def google_photo():
     return Response(media_response.content, content_type=media_response.headers.get("Content-Type", "image/jpeg"), headers={"Cache-Control": "private, max-age=1800"})
 
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)
