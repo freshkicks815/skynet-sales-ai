@@ -13,6 +13,7 @@
 <section class="stats">
     <article><span>Total Leads</span><strong>{{ stats.total or 0 }}</strong></article>
     <article><span>New</span><strong>{{ stats.new_count or 0 }}</strong></article>
+    <article><span>Needs Follow-Up</span><strong>{{ stats.follow_up_count or 0 }}</strong></article>
     <article><span>Interested</span><strong>{{ stats.interested_count or 0 }}</strong></article>
     <article><span>Won</span><strong>{{ stats.won_count or 0 }}</strong></article>
     <article><span>Won Revenue</span><strong>{{ stats.revenue|money }}</strong></article>
