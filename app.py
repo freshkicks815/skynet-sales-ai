@@ -999,7 +999,98 @@ def google_photo():
         return "Photo unavailable", 502
     return Response(media_response.content, content_type=media_response.headers.get("Content-Type", "image/jpeg"), headers={"Cache-Control": "private, max-age=1800"})
 
+@app.route("/retell/webhook", methods=["POST"])
+def retell_webhook():
+    data = request.get_json(silent=True) or {}
 
+    event = data.get("event", "")
+    call = data.get("call", {}) or {}
+
+    call_id = call.get("call_id", "")
+    disconnection_reason = call.get("disconnection_reason", "")
+    call_status = call.get("call_status", "")
+
+    metadata = call.get("metadata", {}) or {}
+    dynamic_vars = call.get("retell_llm_dynamic_variables", {}) or {}
+
+    # Sales AI sends lead_id to Retell in both metadata
+    # and retell_llm_dynamic_variables.
+    lead_id = metadata.get("lead_id") or dynamic_vars.get("lead_id")
+
+    if not lead_id:
+        return {"ok": True, "ignored": "No lead_id"}, 200
+
+    try:
+        lead_id = int(lead_id)
+    except (TypeError, ValueError):
+        return {"ok": True, "ignored": "Invalid lead_id"}, 200
+
+    # For now, record only the events we need.
+    if event not in ("call_ended", "call_analyzed"):
+        return {"ok": True, "ignored": event}, 200
+
+    # Translate Retell's final call result into something useful
+    # in the Sales AI Activity Notes.
+    reason = (disconnection_reason or "").lower()
+
+    no_answer_reasons = {
+        "dial_no_answer",
+        "dial_busy",
+        "dial_failed",
+        "voicemail_reached",
+        "machine_detected",
+    }
+
+    if reason in no_answer_reasons:
+        activity_details = f"Mandy AI Result: No Answer ({disconnection_reason})"
+        new_status = "Follow-up"
+    else:
+        activity_details = (
+            f"Mandy AI Result: Call ended"
+            f" | Reason: {disconnection_reason or 'Not provided'}"
+            f" | Retell status: {call_status or 'Not provided'}"
+        )
+        new_status = None
+
+    with get_db() as conn:
+        lead = conn.execute(
+            "SELECT id, status FROM leads WHERE id = ?",
+            (lead_id,),
+        ).fetchone()
+
+        if not lead:
+            return {"ok": True, "ignored": "Lead not found"}, 200
+
+        # Do not overwrite a Do Not Call status.
+        if new_status and lead["status"] != "Do Not Call":
+            conn.execute(
+                "UPDATE leads SET status = ? WHERE id = ?",
+                (new_status, lead_id),
+            )
+
+        conn.execute(
+            """
+            INSERT INTO activities
+            (lead_id, activity_type, details, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                lead_id,
+                "Mandy AI Result",
+                activity_details,
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+
+        conn.commit()
+
+    return {
+        "ok": True,
+        "event": event,
+        "lead_id": lead_id,
+        "call_id": call_id,
+        "result": activity_details,
+    }, 200
 init_db()
 
 if __name__ == "__main__":
