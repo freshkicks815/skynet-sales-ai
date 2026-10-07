@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sales Intelligence | {{ lead.business_name }}{% endblock %}
+{% block content %}
+<section class="hero"><div><p class="eyebrow">AI SALES CONSULTANT</p><h1>{{ lead.business_name }}</h1><p>Opportunity scoring, package selection, and payment recommendation.</p></div><div class="score-orb"><strong>{{ profile.opportunity_score }}</strong><span>Opportunity</span></div></section>
+<form method="post">
+<section class="score-grid">
+{% for key,label in [('website_score','Website'),('google_score','Google Profile'),('social_score','Social Media'),('brand_score','Brand Consistency'),('opportunity_score','Sales Opportunity')] %}
+<label class="score-card"><span>{{ label }}</span><strong><output id="out-{{ key }}">{{ profile[key] }}</output>/100</strong><input type="range" min="0" max="100" name="{{ key }}" value="{{ profile[key] }}" oninput="document.getElementById('out-{{ key }}').value=this.value"></label>
+{% endfor %}
+</section>
+<section class="panel recommendation-hero"><div><p class="eyebrow">BEST FIT</p><h2>{{ recommended.name }}</h2><p>{{ profile.recommendation_reason or recommended.reason }}</p><div class="confidence"><span style="width:{{ profile.recommendation_confidence or recommended.confidence }}%"></span></div><small>{{ profile.recommendation_confidence or recommended.confidence }}% recommendation confidence</small></div><div class="price-stack"><strong>${{ '%.2f'|format(recommended.monthly_price) }}<small>/mo</small></strong><span>or ${{ '%.2f'|format(recommended.yearly_price) }}/year</span></div></section>
+<section class="panel"><h2>Choose Plan & Billing</h2><div class="plan-choice-grid">{% for plan in plans %}<label class="plan-choice {% if plan.name == recommended.name %}recommended{% endif %}"><input type="radio" name="selected_plan" value="{{ plan.name }}" {% if (profile.selected_plan or recommended.name)==plan.name %}checked{% endif %}><span class="eyebrow">{% if plan.name == recommended.name %}RECOMMENDED{% else %}OPTION{% endif %}</span><h3>{{ plan.name }}</h3><p>{{ plan.description }}</p><b>${{ '%.2f'|format(plan.monthly_price) }}/mo · ${{ '%.2f'|format(plan.yearly_price) }}/yr</b></label>{% endfor %}</div>
+<div class="billing-toggle"><label><input type="radio" name="selected_billing" value="Monthly" {% if (profile.selected_billing or profile.payment_recommendation)=='Monthly' %}checked{% endif %}> Monthly</label><label><input type="radio" name="selected_billing" value="Yearly" {% if (profile.selected_billing or profile.payment_recommendation)=='Yearly' %}checked{% endif %}> Yearly</label><span>AI suggests <strong>{{ profile.payment_recommendation }}</strong> billing.</span></div>
+<label>Recommendation reason<textarea name="recommendation_reason" rows="3">{{ profile.recommendation_reason or recommended.reason }}</textarea></label><label>Confidence<input type="number" name="recommendation_confidence" min="0" max="100" value="{{ profile.recommendation_confidence or recommended.confidence }}"></label><button class="button">Save Recommendation</button></section>
+</form>
+<div class="actions"><a class="button secondary" href="{{ url_for('lead_detail', lead_id=lead.id) }}">Back to Lead</a><a class="button" href="{{ url_for('proposal', lead_id=lead.id) }}">Open Smart Proposal</a></div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.business_name }} | Skynet Sales AI{% endblock %}
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">{{ lead.industry or "BUSINESS PROSPECT" }}</p>
+        <h1>{{ lead.business_name }}</h1>
+        <p>{{ lead.city or "Location not entered" }} · {{ lead.website_status }}</p>
+    </div>
+    <span class="badge large">{{ lead.status }}</span>
+</section>
+
+<div class="two-column">
+    <section class="panel">
+        <h2>Lead Details</h2>
+        <dl class="details">
+            <div><dt>Contact</dt><dd>{{ lead.contact_name or "Not known" }}</dd></div>
+            <div><dt>Phone</dt><dd>{{ lead.phone or "Not entered" }}</dd></div>
+            <div><dt>Email</dt><dd>{{ lead.email or "Not entered" }}</dd></div>
+            <div><dt>Current Recommendation</dt><dd>{{ lead.recommended_plan }}</dd></div>
+            <div><dt>Current Quote</dt><dd>{{ lead.quote_amount|money }}</dd></div>
+        </dl>
+
+        <form method="post" action="{{ url_for('update_status', lead_id=lead.id) }}" class="inline-form">
+            <select name="status">
+                {% for status in ["New", "Contacted", "Interested", "Follow-up", "Won", "Lost", "Do Not Call"] %}
+                <option {% if lead.status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+            <button class="button small">Update Status</button>
+        </form>
+
+        <div class="actions">
+            {% if lead.phone and lead.status != "Do Not Call" %}
+            <form method="post" action="{{ url_for('call_with_mandy', lead_id=lead.id) }}" onsubmit="return confirm('Have you reviewed this lead and applicable calling rules? Start one outbound Mandy call to {{ lead.business_name|e }} now?');">
+                <button class="button" type="submit">Call With Mandy</button>
+            </form>
+            {% elif lead.status == "Do Not Call" %}
+            <span class="badge">Do Not Call — AI calling blocked</span>
+            {% endif %}
+            <a class="button" href="{{ url_for('brand_intelligence', lead_id=lead.id) }}">Scan Social Presence</a>
+            <a class="button" href="{{ url_for('sales_intelligence', lead_id=lead.id) }}">Sales Intelligence</a>
+            <a class="button" href="{{ url_for('new_website_concept', lead_id=lead.id) }}">Generate Homepage Concept</a>
+            <a class="button secondary" href="{{ url_for('proposal', lead_id=lead.id) }}">Open Proposal</a>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Create Custom Quote</h2>
+        <form method="post" action="{{ url_for('custom_quote', lead_id=lead.id) }}" class="compact-form">
+            <label>
+                Website Type
+                <select name="needs_ecommerce">
+                    <option value="no" {% if not lead.needs_ecommerce %}selected{% endif %}>Informational</option>
+                    <option value="yes" {% if lead.needs_ecommerce %}selected{% endif %}>E-Commerce</option>
+                </select>
+            </label>
+            <label>
+                Products
+                <input type="number" name="products" min="0" value="{{ lead.products }}">
+            </label>
+            <label>
+                Extra Pages
+                <input type="number" name="extra_pages" min="0" value="0">
+            </label>
+            <label>
+                Logo
+                <select name="logo"><option value="no">No</option><option value="yes">Yes</option></select>
+            </label>
+            <label>
+                SEO
+                <select name="seo"><option value="no">No</option><option value="yes">Yes</option></select>
+            </label>
+            <label>
+                Booking System
+                <select name="booking"><option value="no">No</option><option value="yes">Yes</option></select>
+            </label>
+            <label>
+                Custom Features
+                <input type="number" name="custom_features" min="0" value="0">
+            </label>
+            <button class="button" type="submit">Calculate Quote</button>
+        </form>
+    </section>
+</div>
+
+<section class="panel">
+    <p class="eyebrow">CALL ASSISTANT</p>
+    <h2>Personalized Call Script</h2>
+    <pre class="script">{{ call_script }}</pre>
+    <p class="muted">Review the business information and applicable calling rules before contacting the prospect.</p>
+</section>
+
+<section class="panel">
+    <h2>Activity Notes</h2>
+    <form method="post" action="{{ url_for('add_activity', lead_id=lead.id) }}" class="activity-form">
+        <select name="activity_type">
+            <option>Call</option>
+            <option>Email</option>
+            <option>Follow-up</option>
+            <option>Note</option>
+        </select>
+        <input name="details" placeholder="What happened?" required>
+        <button class="button small">Save Activity</button>
+    </form>
+
+    <div class="timeline">
+        {% for activity in activities %}
+        <article>
+            <strong>{{ activity.activity_type }}</strong>
+            <span>{{ activity.created_at }}</span>
+            <p>{{ activity.details }}</p>
+        </article>
+        {% else %}
+        <p class="muted">No activity recorded yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

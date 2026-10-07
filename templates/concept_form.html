@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Generate Website Concept | Skynet Sales AI{% endblock %}
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">AI DESIGN ENGINE</p>
+        <h1>Generate a Homepage Concept</h1>
+        <p>Create a media-rich concept for {{ lead.business_name }}. Skynet will look for Google business photos, inspect the official website for public social links, and build a stronger before-and-after presentation.</p>
+    </div>
+</section>
+
+<section class="panel concept-builder">
+    <form method="post" class="form-grid">
+        <label>
+            Business
+            <input value="{{ lead.business_name }}" disabled>
+        </label>
+        <label>
+            Industry
+            <input name="industry" value="{{ lead.industry or '' }}" placeholder="Restaurant, roofing, auto repair..." required>
+        </label>
+        <label>
+            City / Market
+            <input name="city" value="{{ lead.city or '' }}" placeholder="Rockford, Illinois">
+        </label>
+        <label>
+            Existing Website
+            <input name="website_url" value="{{ detected_website }}" placeholder="https://example.com">
+        </label>
+        <label class="full">
+            Primary Goal
+            <input name="primary_goal" placeholder="Leave blank for an automatic industry recommendation">
+        </label>
+        <label class="full">
+            Visual Style
+            <input name="tone" placeholder="Leave blank for an automatic industry-specific style">
+        </label>
+        <button class="button full" type="submit">Generate Website Concept</button>
+    </form>
+</section>
+
+<section class="panel">
+    <p class="eyebrow">WHAT THIS CREATES</p>
+    <div class="feature-grid">
+        <article><strong>Real Business Photos</strong><p>Uses available Google business photos and public imagery linked from the official website.</p></article>
+        <article><strong>Before vs. After</strong><p>A sales comparison showing current gaps and the proposed customer experience.</p></article>
+        <article><strong>Horizons Prompt</strong><p>A complete prompt ready to copy into Hostinger Horizons.</p></article>
+    </div>
+</section>
+{% endblock %}

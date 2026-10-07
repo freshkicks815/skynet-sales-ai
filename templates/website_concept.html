@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.business_name }} Website Concept{% endblock %}
+{% block content %}
+<section class="concept-header">
+    <div>
+        <p class="eyebrow">WEBSITE CONCEPT · {{ concept.industry_label|upper }}</p>
+        <h1>{{ lead.business_name }}</h1>
+        <p>{{ concept.goal }} · Generated {{ created_at }}</p>
+    </div>
+    <div class="actions">
+        <a class="button secondary" href="{{ url_for('lead_detail', lead_id=lead.id) }}">Back to Lead</a>
+        <button class="button" onclick="window.print()">Print Concept</button>
+    </div>
+</section>
+
+<section class="comparison-grid">
+    <article class="comparison-panel before-panel">
+        <p class="eyebrow">BEFORE</p>
+        <h2>Current Online Presence</h2>
+        {% if concept.website_url %}
+        <p><a href="{{ concept.website_url }}" target="_blank" rel="noopener">{{ concept.website_url }}</a></p>
+        {% else %}
+        <p>No dedicated website was included with this lead.</p>
+        {% endif %}
+        <div class="finding-list">
+            {% for item in concept.before_findings %}
+            <div class="finding {{ item.state }}">
+                <span>{% if item.state == "good" %}✓{% elif item.state == "bad" %}×{% else %}!{% endif %}</span>
+                <div><strong>{{ item.title }}</strong><p>{{ item.detail }}</p></div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="comparison-panel after-summary">
+        <p class="eyebrow">AFTER</p>
+        <h2>Proposed Customer Experience</h2>
+        <dl class="details">
+            <div><dt>Primary goal</dt><dd>{{ concept.goal }}</dd></div>
+            <div><dt>Audience</dt><dd>{{ concept.audience }}</dd></div>
+            <div><dt>Style</dt><dd>{{ concept.style }}</dd></div>
+            <div><dt>Primary action</dt><dd>{{ concept.primary_cta }}</dd></div>
+        </dl>
+        <div class="palette-row">
+            {% for color in concept.palette %}
+            <span style="background: {{ color }}" title="{{ color }}"></span>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="browser-shell">
+    <div class="browser-bar">
+        <span></span><span></span><span></span>
+        <div>{{ lead.business_name|lower|replace(" ", "") }}.com</div>
+    </div>
+
+    <div class="mock-site" style="--mock-primary: {{ concept.palette[0] }}; --mock-accent: {{ concept.palette[1] }}; --mock-light: {{ concept.palette[2] }};">
+        <nav class="mock-nav">
+            <strong>{{ lead.business_name }}</strong>
+            <div><span>Home</span><span>Services</span><span>Reviews</span><span>Contact</span></div>
+            <button>{{ concept.primary_cta }}</button>
+        </nav>
+
+        <header class="mock-hero">
+            <div>
+                <p>{{ concept.industry_label }} · {{ concept.city }}</p>
+                <h2>{{ concept.hero_title }}</h2>
+                <div class="mock-copy">{{ concept.hero_text }}</div>
+                <div class="mock-actions">
+                    <button>{{ concept.primary_cta }}</button>
+                    <button class="outline">{{ concept.secondary_cta }}</button>
+                </div>
+            </div>
+            <div class="hero-visual {% if concept.assets.gallery %}has-photo{% endif %}">
+                {% if concept.assets.gallery %}
+                    {% set hero = concept.assets.gallery[0] %}
+                    {% if hero.kind == "google" %}<img src="{{ url_for('google_photo', name=hero.photo_name) }}" alt="{{ lead.business_name }} business photo">{% else %}<img src="{{ hero.url }}" alt="{{ lead.business_name }} business photo" referrerpolicy="no-referrer">{% endif %}
+                    <div class="photo-overlay"><span>{{ concept.industry_label }}</span><strong>{{ lead.business_name }}</strong></div>
+                {% else %}<span>{{ concept.industry_label }}</span><strong>{{ lead.business_name }}</strong>{% endif %}
+            </div>
+        </header>
+
+        <section class="trust-strip">
+            <div><strong>Local</strong><span>Built around the community</span></div>
+            <div><strong>Trusted</strong><span>Reviews and proof up front</span></div>
+            <div><strong>Easy</strong><span>Clear action on every screen</span></div>
+        </section>
+
+        <section class="mock-section">
+            <p class="mock-kicker">DESIGNED TO CONVERT</p>
+            <h3>A homepage built around what customers need next.</h3>
+            <div class="mock-card-grid">
+                {% for section in concept.sections %}
+                <article>
+                    <span>0{{ loop.index }}</span>
+                    <h4>{{ section.title }}</h4>
+                    <p>{{ section.description }}</p>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="mock-cta">
+            <div>
+                <p>READY WHEN THE CUSTOMER IS</p>
+                <h3>{{ concept.primary_cta }}</h3>
+            </div>
+            <button>{{ concept.primary_cta }}</button>
+        </section>
+    </div>
+</section>
+
+{% if concept.assets.social_links or concept.assets.gallery %}
+<section class="panel media-discovery-panel">
+  <div class="section-heading"><div><p class="eyebrow">BUSINESS MEDIA DISCOVERY</p><h2>Photos and Social Presence</h2><p>Public assets located for this sales concept. Verify permission before publishing them on a final website.</p></div></div>
+  {% if concept.assets.social_links %}<div class="social-pills">{% for social in concept.assets.social_links %}<a href="{{ social.url }}" target="_blank" rel="noopener">{{ social.platform }}</a>{% endfor %}</div>{% else %}<p class="muted">No social profiles were linked from the official website.</p>{% endif %}
+  {% if concept.assets.gallery %}<div class="business-gallery">{% for image in concept.assets.gallery %}<figure>{% if image.kind == "google" %}<img src="{{ url_for('google_photo', name=image.photo_name) }}" alt="{{ lead.business_name }} photo {{ loop.index }}">{% else %}<img src="{{ image.url }}" alt="{{ lead.business_name }} photo {{ loop.index }}" referrerpolicy="no-referrer">{% endif %}<figcaption><strong>{{ image.source }}</strong>{% if image.attributions %}{% for author in image.attributions %}{% if author.uri %} · <a href="{{ author.uri }}" target="_blank" rel="noopener">{{ author.name }}</a>{% else %} · {{ author.name }}{% endif %}{% endfor %}{% endif %}</figcaption></figure>{% endfor %}</div>{% endif %}
+</section>
+{% endif %}
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">HOSTINGER HORIZONS</p>
+            <h2>Ready-to-Copy Website Prompt</h2>
+        </div>
+        <button class="button small" onclick="copyHorizonsPrompt()">Copy Prompt</button>
+    </div>
+    <textarea id="horizonsPrompt" class="prompt-box" readonly>{{ concept.horizons_prompt }}
+
+Available real-business assets:
+{% if concept.assets.gallery %}- Use selected business photos after confirming client permission.{% else %}- No usable business photos were found automatically; request brand photos from the client.{% endif %}
+{% if concept.assets.social_links %}- Social profiles found: {% for social in concept.assets.social_links %}{{ social.platform }}{% if not loop.last %}, {% endif %}{% endfor %}.{% else %}- No social profiles were confirmed from the official website.{% endif %}
+- Keep Google photo attribution visible wherever required.
+- Do not imply third-party photos are owned by the business unless confirmed.
+</textarea>
+</section>
+
+<script>
+function copyHorizonsPrompt() {
+    const box = document.getElementById("horizonsPrompt");
+    box.select();
+    box.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(box.value).then(() => {
+        const button = event.currentTarget;
+        const oldText = button.textContent;
+        button.textContent = "Copied!";
+        setTimeout(() => button.textContent = oldText, 1400);
+    });
+}
+</script>
+{% endblock %}

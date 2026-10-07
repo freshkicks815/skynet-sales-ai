@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Skynet Sales AI{% endblock %}
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">SKYNET SITES</p>
+        <h1>Sales Command Center</h1>
+        <p>Track prospects, generate quotes, prepare calls, and move leads toward a sale.</p>
+    </div>
+    <div class="actions"><a class="button" href="{{ url_for('lead_finder') }}">Find New Leads</a><a class="button secondary" href="{{ url_for('new_lead') }}">Add Manually</a></div>
+</section>
+
+<section class="stats">
+    <article><span>Total Leads</span><strong>{{ stats.total or 0 }}</strong></article>
+    <article><span>New</span><strong>{{ stats.new_count or 0 }}</strong></article>
+    <article><span>Interested</span><strong>{{ stats.interested_count or 0 }}</strong></article>
+    <article><span>Won</span><strong>{{ stats.won_count or 0 }}</strong></article>
+    <article><span>Won Revenue</span><strong>{{ stats.revenue|money }}</strong></article>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">PIPELINE</p>
+            <h2>Recent Leads</h2>
+        </div>
+    </div>
+
+    {% if leads %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Business</th>
+                    <th>Industry</th>
+                    <th>Website</th>
+                    <th>Plan</th>
+                    <th>Quote</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td><a href="{{ url_for('lead_detail', lead_id=lead.id) }}">{{ lead.business_name }}</a></td>
+                    <td>{{ lead.industry or "—" }}</td>
+                    <td>{{ lead.website_status }}</td>
+                    <td>{{ lead.recommended_plan }}</td>
+                    <td>{{ lead.quote_amount|money }}</td>
+                    <td><span class="badge">{{ lead.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty">
+            <h3>No leads yet</h3>
+            <p>Add the first business you want to contact.</p>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
