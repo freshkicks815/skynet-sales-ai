@@ -374,6 +374,7 @@ def dashboard():
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN status = 'New' THEN 1 ELSE 0 END) AS new_count,
+                SUM(CASE WHEN status = 'Follow-up' THEN 1 ELSE 0 END) AS follow_up_count,
                 SUM(CASE WHEN status = 'Interested' THEN 1 ELSE 0 END) AS interested_count,
                 SUM(CASE WHEN status = 'Won' THEN 1 ELSE 0 END) AS won_count,
                 COALESCE(SUM(CASE WHEN status = 'Won' THEN quote_amount ELSE 0 END), 0) AS revenue
