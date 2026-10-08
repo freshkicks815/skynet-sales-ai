@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import sqlite3
+import psycopg2
+from psycopg2.extras import DictCursor
 import json
 import os
 import requests
@@ -19,100 +20,98 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
-DB_PATH = BASE_DIR / "skynet_sales.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SKYNET_SECRET_KEY", "local-development-key-change-before-production")
 
 
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+class DatabaseConnection:
+    """Small compatibility wrapper so the existing app can use PostgreSQL safely."""
+
+    def __init__(self) -> None:
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL is not configured.")
+        self.conn = psycopg2.connect(DATABASE_URL)
+
+    @staticmethod
+    def _sql(query: str) -> str:
+        # The existing app uses SQLite-style ? placeholders. PostgreSQL uses %s.
+        return query.replace("?", "%s")
+
+    def execute(self, query: str, params=()):
+        cur = self.conn.cursor(cursor_factory=DictCursor)
+        cur.execute(self._sql(query), params)
+        return cur
+
+    def commit(self) -> None:
+        self.conn.commit()
+
+    def rollback(self) -> None:
+        self.conn.rollback()
+
+    def close(self) -> None:
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self.conn.commit()
+        else:
+            self.conn.rollback()
+        self.conn.close()
+        return False
+
+
+def get_db() -> DatabaseConnection:
+    return DatabaseConnection()
 
 
 def init_db() -> None:
+    statements = [
+        """CREATE TABLE IF NOT EXISTS leads (
+            id SERIAL PRIMARY KEY,
+            business_name TEXT NOT NULL, contact_name TEXT, phone TEXT, email TEXT,
+            industry TEXT, city TEXT, website_status TEXT NOT NULL DEFAULT 'No website found',
+            products INTEGER NOT NULL DEFAULT 0, needs_ecommerce INTEGER NOT NULL DEFAULT 0,
+            notes TEXT, status TEXT NOT NULL DEFAULT 'New', recommended_plan TEXT,
+            quote_amount DOUBLE PRECISION, created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE IF NOT EXISTS activities (
+            id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES leads(id),
+            activity_type TEXT NOT NULL, details TEXT, created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE IF NOT EXISTS social_profiles (
+            id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES leads(id),
+            platform TEXT NOT NULL, url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Confirmed',
+            source TEXT, updated_at TEXT NOT NULL, UNIQUE(lead_id, platform)
+        )""",
+        """CREATE TABLE IF NOT EXISTS pricing_plans (
+            id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, description TEXT NOT NULL,
+            monthly_price DOUBLE PRECISION NOT NULL DEFAULT 0, yearly_price DOUBLE PRECISION NOT NULL DEFAULT 0,
+            min_products INTEGER NOT NULL DEFAULT 0, max_products INTEGER,
+            features_json TEXT NOT NULL DEFAULT '[]', display_order INTEGER NOT NULL DEFAULT 0,
+            is_active INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE IF NOT EXISTS lead_sales_profiles (
+            lead_id INTEGER PRIMARY KEY REFERENCES leads(id), website_score INTEGER NOT NULL DEFAULT 50,
+            google_score INTEGER NOT NULL DEFAULT 50, social_score INTEGER NOT NULL DEFAULT 0,
+            brand_score INTEGER NOT NULL DEFAULT 40, opportunity_score INTEGER NOT NULL DEFAULT 50,
+            recommendation_confidence INTEGER NOT NULL DEFAULT 75,
+            payment_recommendation TEXT NOT NULL DEFAULT 'Monthly', recommendation_reason TEXT,
+            selected_plan TEXT, selected_billing TEXT, updated_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE IF NOT EXISTS website_concepts (
+            id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES leads(id),
+            concept_json TEXT NOT NULL, created_at TEXT NOT NULL
+        )""",
+    ]
     with get_db() as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS leads (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                business_name TEXT NOT NULL,
-                contact_name TEXT,
-                phone TEXT,
-                email TEXT,
-                industry TEXT,
-                city TEXT,
-                website_status TEXT NOT NULL DEFAULT 'No website found',
-                products INTEGER NOT NULL DEFAULT 0,
-                needs_ecommerce INTEGER NOT NULL DEFAULT 0,
-                notes TEXT,
-                status TEXT NOT NULL DEFAULT 'New',
-                recommended_plan TEXT,
-                quote_amount REAL,
-                created_at TEXT NOT NULL
-            );
+        for statement in statements:
+            conn.execute(statement)
 
-            CREATE TABLE IF NOT EXISTS activities (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                lead_id INTEGER NOT NULL,
-                activity_type TEXT NOT NULL,
-                details TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (lead_id) REFERENCES leads(id)
-            );
-
-            CREATE TABLE IF NOT EXISTS social_profiles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                lead_id INTEGER NOT NULL,
-                platform TEXT NOT NULL,
-                url TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'Confirmed',
-                source TEXT,
-                updated_at TEXT NOT NULL,
-                UNIQUE(lead_id, platform),
-                FOREIGN KEY (lead_id) REFERENCES leads(id)
-            );
-
-            CREATE TABLE IF NOT EXISTS pricing_plans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                description TEXT NOT NULL,
-                monthly_price REAL NOT NULL DEFAULT 0,
-                yearly_price REAL NOT NULL DEFAULT 0,
-                min_products INTEGER NOT NULL DEFAULT 0,
-                max_products INTEGER,
-                features_json TEXT NOT NULL DEFAULT '[]',
-                display_order INTEGER NOT NULL DEFAULT 0,
-                is_active INTEGER NOT NULL DEFAULT 1,
-                updated_at TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS lead_sales_profiles (
-                lead_id INTEGER PRIMARY KEY,
-                website_score INTEGER NOT NULL DEFAULT 50,
-                google_score INTEGER NOT NULL DEFAULT 50,
-                social_score INTEGER NOT NULL DEFAULT 0,
-                brand_score INTEGER NOT NULL DEFAULT 40,
-                opportunity_score INTEGER NOT NULL DEFAULT 50,
-                recommendation_confidence INTEGER NOT NULL DEFAULT 75,
-                payment_recommendation TEXT NOT NULL DEFAULT 'Monthly',
-                recommendation_reason TEXT,
-                selected_plan TEXT,
-                selected_billing TEXT,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (lead_id) REFERENCES leads(id)
-            );
-
-            CREATE TABLE IF NOT EXISTS website_concepts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                lead_id INTEGER NOT NULL,
-                concept_json TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (lead_id) REFERENCES leads(id)
-            );
-            """
-        )
         defaults = [
             ("Basic", "Informational website for your business", 5.0, 50.0, 0, 0,
              ["Custom informational website", "Mobile-friendly design", "Contact form", "Google Maps", "Basic SEO", "Launch support"], 1),
@@ -123,10 +122,11 @@ def init_db() -> None:
         ]
         for row in defaults:
             conn.execute(
-                """INSERT OR IGNORE INTO pricing_plans
+                """INSERT INTO pricing_plans
                 (name, description, monthly_price, yearly_price, min_products, max_products,
                  features_json, display_order, is_active, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+                ON CONFLICT (name) DO NOTHING""",
                 (*row[:6], json.dumps(row[6]), row[7], datetime.now().isoformat(timespec="seconds")),
             )
 
@@ -139,7 +139,7 @@ def money(value: float | int | None) -> str:
 app.jinja_env.filters["money"] = money
 
 
-def get_active_plans(conn: sqlite3.Connection | None = None) -> list[dict[str, Any]]:
+def get_active_plans(conn: DatabaseConnection | None = None) -> list[dict[str, Any]]:
     owns = conn is None
     conn = conn or get_db()
     rows = conn.execute(
@@ -180,7 +180,7 @@ def recommend_plan(needs_ecommerce: bool, products: int, plans: list[dict[str, A
     return result
 
 
-def calculate_sales_profile(lead: sqlite3.Row, social_count: int = 0) -> dict[str, Any]:
+def calculate_sales_profile(lead: Any, social_count: int = 0) -> dict[str, Any]:
     website_text = (lead["website_status"] or "").lower()
     has_site = "http" in website_text or ("website" in website_text and "no website" not in website_text)
     website_score = 64 if has_site else 24
@@ -275,7 +275,7 @@ def calculate_quote(
     }
 
 
-def build_call_script(lead: sqlite3.Row) -> str:
+def build_call_script(lead: Any) -> str:
     business = lead["business_name"]
     industry = lead["industry"] or "business"
     city = lead["city"] or "your area"
@@ -303,7 +303,7 @@ def retell_config() -> dict[str, str]:
     }
 
 
-def place_mandy_call(lead: sqlite3.Row) -> dict[str, Any]:
+def place_mandy_call(lead: Any) -> dict[str, Any]:
     cfg = retell_config()
     missing = [name for name, value in cfg.items() if not value]
     if missing:
@@ -409,7 +409,7 @@ def new_lead():
                     website_status, products, needs_ecommerce, notes, status,
                     recommended_plan, quote_amount, created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
                 """,
                 (
                     business_name,
@@ -428,7 +428,7 @@ def new_lead():
                     datetime.now().isoformat(timespec="seconds"),
                 ),
             )
-            lead_id = cursor.lastrowid
+            lead_id = cursor.fetchone()[0]
 
         flash("Lead saved and initial quote created.", "success")
         return redirect(url_for("lead_detail", lead_id=lead_id))
@@ -798,7 +798,7 @@ def import_discovered_lead(result_index: int):
                 website_status, products, needs_ecommerce, notes, status,
                 recommended_plan, quote_amount, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
             """,
             (
                 item.get("business_name", ""),
@@ -824,7 +824,7 @@ def import_discovered_lead(result_index: int):
                 datetime.now().isoformat(timespec="seconds"),
             ),
         )
-        lead_id = cursor.lastrowid
+        lead_id = cursor.fetchone()[0]
 
     flash("Business imported into your CRM.", "success")
     return redirect(url_for("lead_detail", lead_id=lead_id))
@@ -926,7 +926,7 @@ def new_website_concept(lead_id: int):
             cursor = conn.execute(
                 """
                 INSERT INTO website_concepts (lead_id, concept_json, created_at)
-                VALUES (?, ?, ?)
+                VALUES (?, ?, ?) RETURNING id
                 """,
                 (
                     lead_id,
@@ -934,7 +934,7 @@ def new_website_concept(lead_id: int):
                     datetime.now().isoformat(timespec="seconds"),
                 ),
             )
-            concept_id = cursor.lastrowid
+            concept_id = cursor.fetchone()[0]
             conn.execute(
                 """
                 INSERT INTO activities (lead_id, activity_type, details, created_at)
